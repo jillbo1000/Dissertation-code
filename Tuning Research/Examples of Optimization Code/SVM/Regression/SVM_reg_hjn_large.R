@@ -1,0 +1,66 @@
+#!/usr/bin/env Rscript
+library("R.utils")
+library(optimx)
+library(e1071)
+
+num <- cmdArgs()
+num
+data_name <- as.character(num[[1]])
+data_name
+file_num <- as.integer(num[[2]])
+file_num
+seed <- as.integer(num[[3]])
+seed
+cross <- as.integer(num[[4]])
+cross
+cmin <- as.numeric(num[[5]])
+cmin
+cmax <- as.numeric(num[[6]])
+cmax
+cstart <- as.numeric(num[[7]])
+cstart
+gmin <- -1 * as.numeric(num[[8]])
+gmin
+gmax <- as.numeric(num[[9]])
+gmax
+gstart <- -1 * as.numeric(num[[10]])
+gstart
+emin <- as.numeric(num[[11]])
+emin
+emax <- as.numeric(num[[12]])
+emax
+estart <- as.numeric(num[[13]])
+estart
+
+# Load the data and the optimization functions
+
+source("/scratch/general/lustre/u6007925/Grid/Functions/SVM_opt_funs_reg.R")
+
+
+# optimization grid
+
+name <- paste("hjn.", file_num, sep = "")
+
+alldat <- cbind.data.frame(rep(name, 10), matrix(NA, nrow = 10, ncol = 5))
+colnames(alldat) = c("Optimizer", "Cost", "Gamma", "Epsilon", "Time", "MSE")
+
+for(i in 1:10) {
+  t1 <- Sys.time()
+  hjn.obj <- hjn(par = c(cstart, gstart, estart), fn = svm.optN, 
+                 lower = c(cmin, gmin, emin), upper = c(cmax, gmax, emax))
+  t2 <- Sys.time()
+  if(!is.null(hjn.obj)) {
+    alldat$Cost[i] = hjn.obj$par[1]
+    alldat$Gamma[i] = hjn.obj$par[2]
+    alldat$Epsilon[i] = hjn.obj$par[3]
+    alldat$MSE[i] = hjn.obj$value
+  }
+  alldat$Time[i] = as.numeric(t2 - t1, units = "secs")
+}
+
+f1 <- "/scratch/general/lustre/u6007925/Grid/SVM/Regression/Optimization/"
+
+fdat <- paste(f1, data_name, "/", data_name, "_", name, ".csv", sep = "")
+
+write.csv(alldat, fdat, row.names = FALSE)
+
